@@ -1,0 +1,55 @@
+;EXPLANATION, PLEASE READ FIRST:
+;--------------------------------------------------------------------------------------------------------------------------------------
+;Firmware version: Open the file info.txt with a texteditor (Format: FIR-vxxxx-Bxxxxx)
+;A ';'-sign marks a line as a comment (the line has no effect)
+;The Maximum size of this file is 4 kB.
+;After changing values, USB has to be disconnected and you need to power the controller off and on for the changes to take effect.
+
+;Format: index (4 hex digits without prefix), subindex (2 hex digits without prefix), value (up to 8 hex digits with 0x-prefix or dec), switch (1 hex digit without prefix)
+;Possible assignments:
+;Assignment without subindex implies a subindex of zero.
+;607F=600
+;Assignment with subindex
+;607B:02=20000
+;Bitwise OR assignment
+;3202:00|=0x02
+;Bitwise AND assignment
+;3202:00&=0xFFFD
+;Bit set
+;3202:00.00=1
+;Bit clear
+;3202:00.00=0
+;Assignment depending on config switch, if available.
+;#1:6060:00=2
+
+; My User settings
+
+;Activates Virtual COM Port
+2102|=0x100000
+
+;Motor Drive Submode Select
+3202:00=0x0000008
+
+; Pole Pair Count
+2030:00=50
+
+; Maximum permissiable motor current
+2031:00=6000
+
+; Rated current of motor
+6075:00=6000
+
+; Maximum current
+6073:00=500
+
+;Maxmimum current duration
+203B:02=100
+
+; Motor with encoder
+2059:00=0x00000000h
+
+;Motor with brake
+3202:00=0x0000000Dh
+
+
+
