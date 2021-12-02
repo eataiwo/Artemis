@@ -30,6 +30,8 @@ A typical workflow looks like this:
 """
 
 from nanotec_nanolib import Nanolib
+from time import sleep
+import struct
 
 
 class ScanBusCallback(Nanolib.NlcScanBusCallback):  # override super class
@@ -394,16 +396,65 @@ class NanoLibController:
 
         return result.getResult()
 
-    def decode_status(self, status_word):
+    @staticmethod
+    def decode_status(status_word):
         state = {"Not ready to switch on": [0, 16, 32, 48, 128, 160, 144, 176],
                  "Switch on disabled": [64, 80, 96, 112, 192, 208, 224, 240],
-                 "Ready to switch on": [],
-                 "Switched on": [],
-                 "Operation Enabled": [],
-                 "Quick stop active": [],
-                 "Fault reaction active": [],
-                 "Fault": []
+                 "Ready to switch on": [33, 49, 161, 177],
+                 "Switched on": [35, 51, 163, 179],
+                 "Operation Enabled": [39, 55, 167, 183],
+                 "Quick stop active": [7, 23, 135, 151],
+                 "Fault reaction active": [15, 31, 47, 63, 143, 159, 175, 191],
+                 "Fault": [8, 24, 40, 56, 136, 152, 168, 184]
                  }
+
+        filter = 0b0000000011111111
+        status_word &= filter
+
+        if status_word in state["Not ready to switch on"]:
+            result = "Not ready to switch on"
+        elif status_word in state["Switch on disabled"]:
+            result = "Switch on disabled"
+        elif status_word in state["Ready to switch on"]:
+            result = "Ready to switch on"
+        elif status_word in state["Switched on"]:
+            result = "Switched on"
+        elif status_word in state["Operation Enabled"]:
+            result = "Operation Enabled"
+        elif status_word in state["Quick stop active"]:
+            result = "Quick stop active"
+        elif status_word in state["Fault reaction active"]:
+            result = "Fault reaction active"
+        elif status_word in state["Fault"]:
+            result = "Fault"
+        else:
+            result = "Cannot determine controller state"
+        return result
+
+    @staticmethod
+    def decode_mode(mode):
+        if mode == -2:
+            result = "Auto setup"
+        elif mode == -1:
+            result = "Clock-direction mode"
+        elif mode == 0:
+            result = "No mode change/no mode assigned"
+        elif mode == 1:
+            result = "Profile Position Mode"
+        elif mode == 2:
+            result = "Velocity Mode"
+        elif mode == 3:
+            result = "Profile Velocity Mode"
+        elif mode == 4:
+            result = "Profile Torque Mode"
+        elif mode == 5:
+            result = "Reserved"
+        elif mode == 6:
+            result = "Homing Mode"
+        else:
+            result = "Error not able to determine mode"
+
+        return result
 
 
 if __name__ == '__main__':
@@ -422,11 +473,65 @@ if __name__ == '__main__':
     motorControl.connect_device(device_handle)
 
     # add all the interesting stuff
-    status_num = motorControl.read_number(device_handle, Nanolib.OdIndex(0x3202, 0x00))
-    status_word = motorControl.read_number(device_handle, Nanolib.OdIndex(0x6041, 0x00))
+    # status_num = motorControl.read_number(device_handle, Nanolib.OdIndex(0x3202, 0x00))
 
-    print(f"{status_num:b}")
+    status_word = motorControl.read_number(device_handle, Nanolib.OdIndex(0x6041, 0x00))
+    state = motorControl.decode_status(status_word)
+
+    # print(f"{status_num:b}")
+    # print(f"{status_word:b}")
+    # print(status_word)
+
+    print(f"\nCurrent controller state: {state}")
+
+    # Set profile position mode
+    motorControl.write_number(device_handle, 1, Nanolib.OdIndex(0x6060, 0x00), 8)
+    mode = motorControl.read_number(device_handle, Nanolib.OdIndex(0x6061, 0x00))
+    mode = motorControl.decode_mode(mode)
+    print(f"Controller mode: {mode}")
+
+    control_word = motorControl.read_number(device_handle, Nanolib.OdIndex(0x6040, 0x00))
+    print(control_word)
+    print(f"{control_word:b}")
+
+    motorControl.write_number(device_handle, 6, Nanolib.OdIndex(0x6040, 0x00), 16)
+    sleep(2)
+    motorControl.write_number(device_handle, 7, Nanolib.OdIndex(0x6040, 0x00), 16)
+    sleep(2)
+    motorControl.write_number(device_handle, 15, Nanolib.OdIndex(0x6040, 0x00), 16)
+
+    control_word = motorControl.read_number(device_handle, Nanolib.OdIndex(0x6040, 0x00))
+    print(control_word)
+    print(f"{control_word:b}")
+    status_word = motorControl.read_number(device_handle, Nanolib.OdIndex(0x6041, 0x00))
     print(f"{status_word:b}")
+    state = motorControl.decode_status(status_word)
+    print(f"\nCurrent controller state: {state}")
+    # motorControl.write_number(device_handle, 0, Nanolib.OdIndex(0x607A, 0x00), 32)
+    # sleep(0.5)
+    # motorControl.write_number(device_handle, 31, Nanolib.OdIndex(0x6040, 0x00), 16)
+    # motorControl.write_number(device_handle, 15, Nanolib.OdIndex(0x6040, 0x00), 16)
+    # sleep(0.5)
+    # motorControl.write_number(device_handle, 1000, Nanolib.OdIndex(0x607A, 0x00), 32)
+    # motorControl.write_number(device_handle, 31, Nanolib.OdIndex(0x6040, 0x00), 16)
+    # motorControl.write_number(device_handle, 15, Nanolib.OdIndex(0x6040, 0x00), 16)
+    # sleep(0.5)
+    # motorControl.write_number(device_handle, 0, Nanolib.OdIndex(0x607A, 0x00), 32)
+    # motorControl.write_number(device_handle, 31, Nanolib.OdIndex(0x6040, 0x00), 16)
+    # motorControl.write_number(device_handle, 15, Nanolib.OdIndex(0x6040, 0x00), 16)
+
+    count = 1
+    for x in range(4):
+        motorControl.write_number(device_handle, 1000, Nanolib.OdIndex(0x607A, 0x00), 32)
+        motorControl.write_number(device_handle, 0b11111, Nanolib.OdIndex(0x6040, 0x00), 16)
+        motorControl.write_number(device_handle, 0b1111, Nanolib.OdIndex(0x6040, 0x00), 16)
+        sleep(2)
+        motorControl.write_number(device_handle, 0, Nanolib.OdIndex(0x607A, 0x00), 32)
+        motorControl.write_number(device_handle, 0b11111, Nanolib.OdIndex(0x6040, 0x00), 16)
+        motorControl.write_number(device_handle, 0b1111, Nanolib.OdIndex(0x6040, 0x00), 16)
+        sleep(2)
+        print(count)
+        count += 1
 
     ''' Psedocode
     Check status 
@@ -455,8 +560,8 @@ if __name__ == '__main__':
     Check all values were set correctly
     Activate Mode or Set "operation enabled" to see if that works
     Check status 
-    Set new target position 
-    Trigger new set point - set bit 4 in controlword ( Aparrantly if bit 4 is set to 1 and kept there the motor should move automatically, test this out) 
+    Set new target position 607A:00
+    Trigger new set point - set bit 4 in controlword ( Apparently if bit 4 is set to 1 and kept there the motor should move automatically, test this out) 
     Check status and check
         - Position actual value 6064:00
         - Target reached 6041:00

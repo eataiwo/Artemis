@@ -8,7 +8,7 @@ def object_dictionary_access_examples(nanolib_helper, device_handle):
     print('\nOD Example\n')
 
     print("Reading subindex 0 of index 0x6040")
-    status_word = nanolib_helper.read_number(device_handle, Nanolib.OdIndex(0x6040, 0x00))
+    status_word = nanolib_helper.read_number(device_handle, Nanolib.OdIndex(0x6040, 0x021))
     print('Result: {}\n'.format(status_word))
 
     print('Motor Stop (0x6040-0)')
